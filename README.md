@@ -77,31 +77,15 @@ docker compose up -d
 
 其余配置见下方“配置说明”。
 
-## Google Colab 部署
+## Google Colab 一键部署
 
-Colab 运行时是临时环境，适合演示或短时间测试，不适合长期监控任务。先在 Notebook 中设置环境变量，再运行脚本：
-
-```python
-import os
-os.environ["OPENAI_API_KEY"] = "sk-..."
-os.environ["OPENAI_BASE_URL"] = "https://api.openai.com/v1/"
-os.environ["OPENAI_MODEL_NAME"] = "gpt-4.1-mini"
-```
+Colab 运行时是临时环境，适合演示或短时间测试，不适合长期监控任务。在 Notebook 中执行一条命令即可自动拉取项目、安装依赖、构建前端、启动服务并打开 Web UI：
 
 ```bash
-!git clone https://github.com/Usagi-org/ai-goofish-monitor
-%cd ai-goofish-monitor
-!bash colab_deploy.sh
+!OPENAI_API_KEY="sk-..." OPENAI_BASE_URL="https://api.openai.com/v1/" OPENAI_MODEL_NAME="gpt-4.1-mini" bash -c "$(curl -fsSL https://raw.githubusercontent.com/xiaosheng1126/ai-goofish-monitor/master/colab_deploy.sh)"
 ```
 
-脚本启动后，用 Colab 自带代理打开 Web UI：
-
-```python
-from google.colab import output
-output.serve_kernel_port_as_window(8000)
-```
-
-默认端口为 `8000`，可在运行脚本前通过 `os.environ["SERVER_PORT"] = "7860"` 修改。脚本不会自动创建或改写 `.env`，避免把密钥写入仓库文件。
+默认会部署到 `/content/ai-goofish-monitor`，端口为 `8000`。可在命令前追加环境变量调整，例如 `SERVER_PORT=7860` 或 `COLAB_PROJECT_DIR=/content/my-monitor`。脚本不会自动创建或改写 `.env`，避免把密钥写入仓库文件。
 
 
 ### 第一次使用

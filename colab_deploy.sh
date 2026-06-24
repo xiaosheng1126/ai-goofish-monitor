@@ -6,43 +6,35 @@
 
 set -Eeuo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$ROOT_DIR"
-
 PORT="${SERVER_PORT:-8000}"
 HOST="${SERVER_HOST:-0.0.0.0}"
-LOG_FILE="${COLAB_LOG_FILE:-logs/colab-server.log}"
-PID_FILE="${COLAB_PID_FILE:-logs/colab-server.pid}"
 STARTUP_TIMEOUT_SECONDS="${COLAB_STARTUP_TIMEOUT_SECONDS:-30}"
+REPO_URL="${COLAB_REPO_URL:-https://github.com/xiaosheng1126/ai-goofish-monitor.git}"
+PROJECT_DIR="${COLAB_PROJECT_DIR:-/content/ai-goofish-monitor}"
 FOREGROUND=false
 SETUP_ONLY=false
 SKIP_APT=false
 SKIP_FRONTEND_BUILD=false
+SKIP_OPEN_WINDOW=false
 MIN_NODE_MAJOR=20
 
 usage() {
     cat <<'EOF'
 Usage:
   bash colab_deploy.sh [options]
+  curl -fsSL https://raw.githubusercontent.com/xiaosheng1126/ai-goofish-monitor/master/colab_deploy.sh | bash
 
 Options:
   --foreground           Run uvicorn in the foreground.
   --setup-only           Install dependencies and build frontend, then exit.
   --skip-apt             Skip apt-get based system package installation.
   --skip-frontend-build  Skip npm install/build and existing dist copy.
+  --skip-open-window     Skip opening the Colab proxied Web UI.
   -h, --help             Show this help.
 
 Colab notebook example:
-  !git clone https://github.com/Usagi-org/ai-goofish-monitor
-  %cd ai-goofish-monitor
-  import os
-  os.environ["OPENAI_API_KEY"] = "sk-..."
-  os.environ["OPENAI_BASE_URL"] = "https://api.openai.com/v1/"
-  os.environ["OPENAI_MODEL_NAME"] = "gpt-4.1-mini"
-  !bash colab_deploy.sh
-
-  from google.colab import output
-  output.serve_kernel_port_as_window(8000)
+  !OPENAI_API_KEY="sk-..." OPENAI_BASE_URL="https://api.openai.com/v1/" OPENAI_MODEL_NAME="gpt-4.1-mini" \
+    bash -c "$(curl -fsSL https://raw.githubusercontent.com/xiaosheng1126/ai-goofish-monitor/master/colab_deploy.sh)"
 EOF
 }
 
@@ -57,6 +49,50 @@ warn() {
 die() {
     printf '[colab-deploy][error] %s\n' "$*" >&2
     exit 1
+}
+
+is_project_dir() {
+    [ -f "requirements.txt" ] && [ -f "web-ui/package.json" ] && [ -f "src/app.py" ]
+}
+
+bootstrap_project_dir() {
+    if is_project_dir; then
+        ROOT_DIR="$(pwd)"
+        return
+    fi
+
+    if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+        local script_dir
+        script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        if [ -f "$script_dir/requirements.txt" ] && [ -f "$script_dir/web-ui/package.json" ] && [ -f "$script_dir/src/app.py" ]; then
+            ROOT_DIR="$script_dir"
+            cd "$ROOT_DIR"
+            return
+        fi
+    fi
+
+    if ! command -v git >/dev/null 2>&1; then
+        if command -v apt-get >/dev/null 2>&1; then
+            log "Installing git for repository bootstrap."
+            apt-get update
+            apt-get install -y git ca-certificates
+        else
+            die "git is required to clone the project."
+        fi
+    fi
+
+    if [ ! -d "$PROJECT_DIR/.git" ]; then
+        log "Cloning project into $PROJECT_DIR"
+        git clone "$REPO_URL" "$PROJECT_DIR"
+    else
+        log "Using existing project directory: $PROJECT_DIR"
+    fi
+
+    cd "$PROJECT_DIR"
+    if ! is_project_dir; then
+        die "$PROJECT_DIR is not a valid ai-goofish-monitor checkout."
+    fi
+    ROOT_DIR="$(pwd)"
 }
 
 wait_for_health() {
@@ -85,6 +121,24 @@ PY
     return 1
 }
 
+open_colab_window() {
+    if [ "$SKIP_OPEN_WINDOW" = true ]; then
+        return
+    fi
+
+    python3 - "$PORT" <<'PY'
+import sys
+
+port = int(sys.argv[1])
+try:
+    from google.colab import output
+except Exception:
+    print("Not running inside Google Colab. Open http://127.0.0.1:%s manually." % port)
+else:
+    output.serve_kernel_port_as_window(port)
+PY
+}
+
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --foreground)
@@ -99,6 +153,9 @@ while [ "$#" -gt 0 ]; do
         --skip-frontend-build)
             SKIP_FRONTEND_BUILD=true
             ;;
+        --skip-open-window)
+            SKIP_OPEN_WINDOW=true
+            ;;
         -h|--help)
             usage
             exit 0
@@ -109,6 +166,11 @@ while [ "$#" -gt 0 ]; do
     esac
     shift
 done
+
+bootstrap_project_dir
+
+LOG_FILE="${COLAB_LOG_FILE:-logs/colab-server.log}"
+PID_FILE="${COLAB_PID_FILE:-logs/colab-server.pid}"
 
 if ! command -v python3 >/dev/null 2>&1; then
     die "python3 is required."
@@ -227,5 +289,7 @@ else
     warn "Recent server log:"
     tail -n 80 "$LOG_FILE" >&2 || true
 fi
-log "In Colab, expose the UI with:"
+log "Opening Colab proxied Web UI."
+open_colab_window
+log "If the window did not open, run this in a Colab Python cell:"
 printf 'from google.colab import output\noutput.serve_kernel_port_as_window(%s)\n' "$PORT"
