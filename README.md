@@ -79,7 +79,11 @@ docker compose up -d
 
 ## Google Colab 一键部署
 
-Colab 运行时是临时环境，适合演示或短时间测试，不适合长期监控任务。在 Notebook 中执行一条命令即可自动拉取项目、安装依赖、构建前端、启动服务并打开 Web UI：
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/xiaosheng1126/ai-goofish-monitor/blob/master/colab_deploy.ipynb)
+
+点击上方按钮会打开预置的 Colab Notebook。填写 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL_NAME` 后运行部署单元，即可自动拉取项目、安装依赖、构建前端、启动服务并打开 Web UI。
+
+Colab 运行时是临时环境，适合演示或短时间测试，不适合长期监控任务。按钮不可用时，可在 Notebook 中执行备用命令：
 
 ```bash
 !OPENAI_API_KEY="sk-..." OPENAI_BASE_URL="https://api.openai.com/v1/" OPENAI_MODEL_NAME="gpt-4.1-mini" bash -c "$(curl -fsSL https://raw.githubusercontent.com/xiaosheng1126/ai-goofish-monitor/master/colab_deploy.sh)"
