@@ -254,9 +254,10 @@ if [ "$SKIP_FRONTEND_BUILD" = false ]; then
     log "Building frontend."
     npm --prefix web-ui run build
 
-    log "Copying frontend build to root dist/."
-    mkdir -p dist
-    cp -R web-ui/dist/. dist/
+    if [ ! -d "dist" ]; then
+        die "Frontend build failed: root dist/ was not generated."
+    fi
+    log "Frontend build output is available at root dist/."
 else
     log "Skipping frontend build."
 fi

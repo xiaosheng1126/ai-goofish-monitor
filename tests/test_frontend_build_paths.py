@@ -17,6 +17,7 @@ def test_frontend_build_output_path_is_consistent_across_configs():
     frontend_dockerfile = read_repo_file("web-ui/Dockerfile")
     dockerignore = read_repo_file(".dockerignore")
     start_script = read_repo_file("start.sh")
+    colab_script = read_repo_file("colab_deploy.sh")
     dockerignore_lines = dockerignore.splitlines()
 
     assert "path.resolve(__dirname, '../dist')" in vite_config
@@ -31,3 +32,5 @@ def test_frontend_build_output_path_is_consistent_across_configs():
     assert "web-ui/dist" not in dockerignore_lines
     assert '[ ! -d "dist" ]' in start_script
     assert "cp -r web-ui/dist ./" not in start_script
+    assert '[ ! -d "dist" ]' in colab_script
+    assert "web-ui/dist" not in colab_script
