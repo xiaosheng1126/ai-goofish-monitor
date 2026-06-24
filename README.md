@@ -77,6 +77,32 @@ docker compose up -d
 
 其余配置见下方“配置说明”。
 
+## Google Colab 部署
+
+Colab 运行时是临时环境，适合演示或短时间测试，不适合长期监控任务。先在 Notebook 中设置环境变量，再运行脚本：
+
+```python
+import os
+os.environ["OPENAI_API_KEY"] = "sk-..."
+os.environ["OPENAI_BASE_URL"] = "https://api.openai.com/v1/"
+os.environ["OPENAI_MODEL_NAME"] = "gpt-4.1-mini"
+```
+
+```bash
+!git clone https://github.com/Usagi-org/ai-goofish-monitor
+%cd ai-goofish-monitor
+!bash colab_deploy.sh
+```
+
+脚本启动后，用 Colab 自带代理打开 Web UI：
+
+```python
+from google.colab import output
+output.serve_kernel_port_as_window(8000)
+```
+
+默认端口为 `8000`，可在运行脚本前通过 `os.environ["SERVER_PORT"] = "7860"` 修改。脚本不会自动创建或改写 `.env`，避免把密钥写入仓库文件。
+
 
 ### 第一次使用
 
