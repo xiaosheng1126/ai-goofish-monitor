@@ -2,7 +2,7 @@
 
 # Google Colab deployment helper for ai-goofish-monitor.
 # It installs runtime dependencies, builds the Vue frontend, installs
-# Playwright Chromium, and starts the FastAPI server.
+# Playwright Chromium, and starts the FastAPI server in an isolated uv venv.
 
 set -Eeuo pipefail
 
@@ -17,6 +17,8 @@ SKIP_APT=false
 SKIP_FRONTEND_BUILD=false
 SKIP_OPEN_WINDOW=false
 MIN_NODE_MAJOR=20
+PYTHON_VERSION="${COLAB_PYTHON_VERSION:-3.11}"
+VENV_DIR="${COLAB_VENV_DIR:-.venv}"
 
 usage() {
     cat <<'EOF'
@@ -230,14 +232,19 @@ if [ "$node_major" -lt "$MIN_NODE_MAJOR" ]; then
     die "Node.js 20+ is required for the frontend build. Current version: $(node --version 2>/dev/null || echo unknown)"
 fi
 
-log "Installing Python dependencies."
-python3 -m pip install --upgrade pip
-python3 -m pip install -r requirements.txt
+log "Installing uv and creating isolated Python ${PYTHON_VERSION} environment."
+python3 -m pip install --upgrade pip uv
+uv python install "$PYTHON_VERSION"
+uv venv --python "$PYTHON_VERSION" "$VENV_DIR"
+PYTHON_BIN="$ROOT_DIR/$VENV_DIR/bin/python"
+
+log "Installing Python dependencies into $VENV_DIR."
+uv pip install --python "$PYTHON_BIN" -r requirements.txt
 
 log "Installing Playwright Chromium."
-python3 -m playwright install chromium
+"$PYTHON_BIN" -m playwright install chromium
 if [ "$SKIP_APT" = false ]; then
-    python3 -m playwright install-deps chromium || warn "playwright install-deps failed; continuing because Colab often already has compatible libraries."
+    "$PYTHON_BIN" -m playwright install-deps chromium || warn "playwright install-deps failed; continuing because Colab often already has compatible libraries."
 fi
 
 if [ "$SKIP_FRONTEND_BUILD" = false ]; then
@@ -259,7 +266,7 @@ if [ "$SETUP_ONLY" = true ]; then
     exit 0
 fi
 
-start_cmd=(python3 -m uvicorn src.app:app --host "$HOST" --port "$PORT")
+start_cmd=("$PYTHON_BIN" -m uvicorn src.app:app --host "$HOST" --port "$PORT")
 
 if [ "$FOREGROUND" = true ]; then
     log "Starting server in foreground at http://127.0.0.1:$PORT"

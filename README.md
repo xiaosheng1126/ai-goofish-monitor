@@ -81,7 +81,7 @@ docker compose up -d
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/xiaosheng1126/ai-goofish-monitor/blob/master/colab_deploy.ipynb)
 
-点击上方按钮会打开预置的 Colab Notebook。填写 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL_NAME` 后运行部署单元，即可自动拉取项目、安装依赖、构建前端、启动服务并打开 Web UI。
+点击上方按钮会打开预置的 Colab Notebook。填写 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL_NAME` 后运行部署单元，即可自动拉取项目、用 `uv` 创建隔离 Python 环境、安装依赖、构建前端、启动服务并打开 Web UI。
 
 Colab 运行时是临时环境，适合演示或短时间测试，不适合长期监控任务。按钮不可用时，可在 Notebook 中执行备用命令：
 
@@ -89,7 +89,7 @@ Colab 运行时是临时环境，适合演示或短时间测试，不适合长�
 !OPENAI_API_KEY="sk-..." OPENAI_BASE_URL="https://api.openai.com/v1/" OPENAI_MODEL_NAME="gpt-4.1-mini" bash -c "$(curl -fsSL https://raw.githubusercontent.com/xiaosheng1126/ai-goofish-monitor/master/colab_deploy.sh)"
 ```
 
-默认会部署到 `/content/ai-goofish-monitor`，端口为 `8000`。可在命令前追加环境变量调整，例如 `SERVER_PORT=7860` 或 `COLAB_PROJECT_DIR=/content/my-monitor`。脚本不会自动创建或改写 `.env`，避免把密钥写入仓库文件。
+默认会部署到 `/content/ai-goofish-monitor`，端口为 `8000`，Python 依赖安装在项目内 `.venv`，避免污染 Colab 全局运行时。可在命令前追加环境变量调整，例如 `SERVER_PORT=7860`、`COLAB_PROJECT_DIR=/content/my-monitor` 或 `COLAB_PYTHON_VERSION=3.11`。脚本不会自动创建或改写 `.env`，避免把密钥写入仓库文件。
 
 
 ### 第一次使用
